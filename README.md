@@ -85,4 +85,139 @@ L'interface exploitera ce Knowledge Graph. Les utilisateurs pourront :
 *   **Identifier les "insights" :** Voir les lacunes, les consensus, les implications pour la mission Mars/Lune, mis en évidence par l'IA.
 *   **Accéder aux données brutes :** Cliquer sur une publication pour accéder directement aux données de l'OSDR.
 
-C'est un projet ambitieux qui nécessite une combinaison de compétences en science des données, IA (NLP), ingénierie logicielle et conception d'expérience utilisateur.
+Absolument. C'est l'étape la plus cruciale. Une bonne structure et une architecture bien pensée sont les fondations de la réussite d'un projet de cette envergure.
+
+Commençons par diviser le travail en deux parties :
+1.  **Structure du Projet :** Comment nous allons organiser le travail, les phases et les livrables (la feuille de route).
+2.  **Architecture Technique :** Comment les composants technologiques vont s'articuler pour faire fonctionner l'application (le plan de construction).
+
+---
+
+### 1. Structure du Projet (Découpage en Phases)
+
+Nous allons adopter une approche agile, en construisant le projet par étapes incrémentales. Chaque phase a un objectif clair et produit un résultat tangible.
+
+#### **Phase 0 : Préparation et Mise en Place (1-2 semaines)**
+*   **Objectifs :** Définir précisément les objectifs (MVP - Minimum Viable Product), choisir la stack technologique finale, et préparer l'environnement de développement.
+*   **Actions :**
+    *   **Validation des Données :** Analyser le fichier `.csv` des 608 publications. Vérifier que les liens sont valides et accessibles. Évaluer le format des publications (PDF, HTML, etc.).
+    *   **Définition du MVP :** Quelles sont les 3 fonctionnalités essentielles pour la première version ? Par exemple :
+        1.  Ingérer et traiter 50 publications.
+        2.  Rechercher par mot-clé et afficher un résumé IA.
+        3.  Visualiser les liens entre ces 50 publications et leurs auteurs.
+    *   **Mise en Place de l'Environnement :** Créer le dépôt de code (Git), mettre en place les outils de gestion de projet (Jira, Trello), et configurer les environnements de développement et de production (Cloud, Docker).
+
+#### **Phase 1 : Pipeline de Données et IA (Le Cœur du Système) (4-6 semaines)**
+*   **Objectif :** Construire le système capable de lire, comprendre et structurer les informations des publications. C'est la partie la plus complexe.
+*   **Actions :**
+    *   **1a. Ingestion :** Développer un script (scraper/crawler) qui télécharge le contenu des 608 liens et le stocke.
+    *   **1b. Extraction :** Créer des modules pour extraire le texte brut des différents formats (ex: PyMuPDF pour les PDF).
+    *   **1c. Traitement NLP :** Développer le pipeline d'IA qui :
+        *   Nettoie le texte.
+        *   Effectue l'extraction d'entités (sujets, organismes, méthodes).
+        *   Génère les résumés.
+        *   Identifie les relations (ex: "étude A" -> "utilise la méthode B" -> "sur l'organisme C").
+    *   **1d. Stockage Structuré :** Concevoir et alimenter une base de données (idéalement une base de données graphe comme Neo4j) avec les entités et relations extraites.
+*   **Livrable :** Une base de données "intelligente" et structurée, peuplée avec les informations des 608 publications, interrogeable en interne par les développeurs.
+
+#### **Phase 2 : Développement du Backend (API) (3-4 semaines)**
+*   **Objectif :** Créer un "pont" entre la base de données intelligente et l'interface utilisateur.
+*   **Actions :**
+    *   Développer une API (REST ou GraphQL) qui permettra à l'application web de faire des requêtes.
+    *   Exemples d'endpoints de l'API :
+        *   `GET /publications?search=microgravity` : Pour rechercher des publications.
+        *   `GET /publication/{id}` : Pour obtenir les détails d'une publication (résumé IA, entités clés).
+        *   `GET /graph?center_node={publication_id}` : Pour obtenir les données nécessaires à la visualisation du graphe autour d'une publication.
+*   **Livrable :** Une API documentée et fonctionnelle.
+
+#### **Phase 3 : Développement du Frontend (Interface Utilisateur) (4-5 semaines)**
+*   **Objectif :** Construire l'interface visuelle et interactive que les utilisateurs manipuleront.
+*   **Actions :**
+    *   Créer la structure de l'application (tableau de bord, panneau de recherche, panneau de visualisation).
+    *   Intégrer une librairie de visualisation de graphes (ex: D3.js, Vis.js).
+    *   Connecter l'interface à l'API backend pour afficher les données.
+    *   Développer les fonctionnalités interactives (filtres, clics sur les nœuds du graphe, etc.).
+*   **Livrable :** Une application web cliquable et fonctionnelle (le MVP).
+
+#### **Phase 4 : Intégration, Test et Déploiement (2 semaines)**
+*   **Objectif :** Assurer que tous les composants fonctionnent ensemble sans problème et mettre l'application en ligne.
+*   **Actions :**
+    *   Tests de bout en bout.
+    *   Optimisation des performances.
+    *   Déploiement sur un serveur cloud (AWS, Azure, GCP).
+    *   Mise en place de la CI/CD (intégration et déploiement continus) pour les futures mises à jour.
+*   **Livrable :** Le MVP fonctionnel et accessible en ligne pour les premiers utilisateurs.
+
+---
+
+### 2. Architecture Technique (Le Plan de Construction)
+
+Voici une architecture modulaire et évolutive, typique pour ce genre de projet.
+
+**Schéma de l'Architecture**
+
+```
+[ UTILISATEUR ]
+       ^
+       |  (Navigateur Web)
+       v
++-----------------------------+
+|    Frontend (React/Vue.js)  |  <- Interface utilisateur, visualisations
++-----------------------------+
+       ^
+       |  (Appels API REST/GraphQL)
+       v
++-----------------------------+
+|     Backend (Python/FastAPI)|  <- Logique métier, authentification
++-----------------------------+
+       ^           ^           ^
+       |           |           |
+(Queries) |      (Accès)    |  (Requêtes de tâches)
+       v           v           v
++--------------+ +-----------+ +----------------------------+
+|  Graph DB    | | Document  | |   Pipeline IA / NLP (offline)|
+|   (Neo4j)    | |  Store    | |    (Python, spaCy,         |
+|  - Entités   | |  (S3)     | |     Hugging Face)          |
+|  - Relations | | - PDFs    | |  - Scraper                 |
+|  - Graphe    | | - Textes  | |  - Extractor               |
+|              | |   bruts   | |  - Processor               |
++--------------+ +-----------+ +----------------------------+
+                                      |
+                                      v
+                                (Lit et Écrit dans les BDD)
+```
+
+**Détails des Composants :**
+
+1.  **Frontend (Interface Utilisateur)**
+    *   **Technologies :** React.js, Vue.js, ou Svelte. Ces frameworks sont modernes et parfaits pour des interfaces interactives.
+    *   **Rôle :** Affiche le tableau de bord, les filtres, la barre de recherche et, surtout, la visualisation du graphe de connaissances. C'est ce que l'utilisateur voit et avec quoi il interagit.
+    *   **Librairies Clés :** D3.js (pour des visualisations personnalisées) ou une librairie de graphes clé en main comme `react-force-graph`.
+
+2.  **Backend (Serveur API)**
+    *   **Technologies :** **Python** avec **FastAPI** ou Flask. Python est le choix naturel en raison de son écosystème IA/Data Science. FastAPI est extrêmement rapide et moderne.
+    *   **Rôle :** Sert de chef d'orchestre. Il reçoit les requêtes du frontend (ex: "trouve-moi les études sur Mars"), les traduit en requêtes pour la base de données graphe, et renvoie les résultats au format JSON.
+    *   **API :** **GraphQL** pourrait être un excellent choix ici car il permet au frontend de demander exactement les données dont il a besoin, ce qui est très efficace pour les données complexes d'un graphe.
+
+3.  **Pipeline IA / NLP (Le Cerveau)**
+    *   **Technologies :** Un ensemble de scripts **Python**.
+    *   **Rôle :** C'est un **processus asynchrone / offline**. Il n'est pas exécuté à chaque fois qu'un utilisateur clique. Il tourne en arrière-plan (par exemple, une fois par jour ou à la demande) pour traiter les nouvelles publications.
+    *   **Étapes :**
+        1.  **Scraper (BeautifulSoup, Scrapy) :** Va chercher les publications sur le web.
+        2.  **Extractor (PyMuPDF) :** Extrait le texte des fichiers.
+        3.  **Processor (spaCy, Hugging Face Transformers) :**
+            *   **spaCy** est excellent pour l'extraction d'entités (NER).
+            *   Les modèles de **Hugging Face** sont state-of-the-art pour la génération de résumés, le Question Answering, et le Topic Modeling.
+    *   **Ce pipeline lira les fichiers stockés et écrira ses résultats directement dans la base de données graphe.**
+
+4.  **Couche de Données (La Mémoire)**
+    *   **Base de Données Graphe (ex: Neo4j) :** **Le composant le plus important.** C'est là que résidera l'intelligence. Elle stockera les nœuds (Publications, Auteurs, Sujets, Méthodes) et les arêtes qui les relient (A_ECRIT, A_POUR_SUJET, UTILISE). C'est ce qui permet de répondre à des questions complexes comme "Montre-moi les auteurs qui ont étudié la génétique sur des plantes en utilisant des données de l'ISS".
+    *   **Stockage de Documents/Fichiers (ex: Amazon S3, MinIO) :** Un endroit simple pour stocker les fichiers originaux (PDF, HTML, etc.). La base de données graphe ne stockera qu'un lien vers ces fichiers.
+
+### Prochaines Étapes Concrètes
+
+1.  **Valider le fichier `.csv` :** Écrire un simple script Python pour parcourir les 608 liens et vérifier combien sont des PDF, des pages HTML, etc. C'est un bon "quick win".
+2.  **Mettre en place un environnement de développement local** avec Docker Compose pour lancer un conteneur pour le Backend, un pour la base de données Neo4j, et un pour le Frontend.
+3.  **Faire un "Proof of Concept" (PoC) :** Prendre **5 publications**, leur appliquer manuellement ou avec un script simple le traitement NLP, insérer les données dans Neo4j, et essayer de visualiser le résultat. Cela validera l'approche avant de l'appliquer aux 608 publications.
+
+Cette structure et cette architecture fournissent une feuille de route claire et solide pour transformer cette idée complexe en une application fonctionnelle et puissante.
